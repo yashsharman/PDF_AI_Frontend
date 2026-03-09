@@ -1,7 +1,12 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { API_BASE } from "../lib/api";
 
-export default function ChatInterface({ username, activeFile, onNavigate }) {
+export default function ChatInterface({
+  username,
+  files,
+  activeFile,
+  onNavigate,
+}) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -38,7 +43,11 @@ export default function ChatInterface({ username, activeFile, onNavigate }) {
       const res = await fetch(`${API_BASE}/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, query }),
+        body: JSON.stringify({
+          username,
+          query,
+          file_names: (files || []).map((f) => f.name),
+        }),
       });
 
       if (!res.ok) {
@@ -76,7 +85,7 @@ export default function ChatInterface({ username, activeFile, onNavigate }) {
     } finally {
       setLoading(false);
     }
-  }, [input, loading, username, onNavigate]);
+  }, [input, loading, username, files, onNavigate]);
 
   function handleKeyDown(e) {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -90,9 +99,14 @@ export default function ChatInterface({ username, activeFile, onNavigate }) {
       {/* Header */}
       <div className="chat-header">
         <span className="chat-title">Ask about your documents</span>
-        {activeFile && (
-          <span className="chat-active-file" title={activeFile.name}>
-            {activeFile.name}
+        {files && files.length > 0 && (
+          <span
+            className="chat-active-file"
+            title={files.map((f) => f.name).join(", ")}
+          >
+            {files.length === 1
+              ? files[0].name
+              : `${files.length} files selected`}
           </span>
         )}
       </div>

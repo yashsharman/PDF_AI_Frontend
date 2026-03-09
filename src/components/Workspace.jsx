@@ -3,7 +3,13 @@ import PDFViewer from "./PDFViewer";
 import ChatInterface from "./ChatInterface";
 import { API_BASE } from "../lib/api";
 
-export default function Workspace({ username, files, onAddFiles }) {
+export default function Workspace({
+  username,
+  files,
+  onAddFiles,
+  onLogout,
+  onGoToDashboard,
+}) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [addError, setAddError] = useState("");
   // navTarget drives automatic PDF navigation after an AI response
@@ -41,13 +47,13 @@ export default function Workspace({ username, files, onAddFiles }) {
         method: "POST",
         body: formData,
       });
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
         throw new Error(data.detail || "Upload failed");
       }
-      const newFileData = incoming.map((f) => ({
-        name: f.name,
-        url: URL.createObjectURL(f),
+      const newFileData = (data.files || []).map((f) => ({
+        name: f.file_name,
+        url: f.file_url,
       }));
       onAddFiles(newFileData);
       setActiveIndex(files.length);
@@ -84,6 +90,28 @@ export default function Workspace({ username, files, onAddFiles }) {
 
         <button
           className="add-pdf-btn"
+          onClick={onGoToDashboard}
+          title="Back to dashboard"
+        >
+          <svg
+            width="13"
+            height="13"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M2.25 12l8.954-8.955a1.126 1.126 0 011.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"
+            />
+          </svg>
+          Dashboard
+        </button>
+
+        <button
+          className="add-pdf-btn"
           onClick={() => inputRef.current.click()}
           title="Upload more PDFs"
         >
@@ -112,6 +140,32 @@ export default function Workspace({ username, files, onAddFiles }) {
           style={{ display: "none" }}
           onChange={handleAddMore}
         />
+
+        <button
+          className="add-pdf-btn"
+          onClick={onLogout}
+          title="Sign out"
+          style={{
+            color: "var(--danger)",
+            borderColor: "rgba(224,107,107,0.35)",
+          }}
+        >
+          <svg
+            width="13"
+            height="13"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75"
+            />
+          </svg>
+          Sign Out
+        </button>
       </header>
 
       {addError && (
@@ -145,6 +199,7 @@ export default function Workspace({ username, files, onAddFiles }) {
         <div className="workspace-panel workspace-panel--right">
           <ChatInterface
             username={username}
+            files={files}
             activeFile={files[safeIndex]}
             onNavigate={handleNavigate}
           />
