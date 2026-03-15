@@ -507,6 +507,15 @@ textarea:focus-visible {
 }
 
 /* ── Error / Button ────────────────────── */
+.upload-warn {
+  font-size: 13px;
+  color: #b45309;
+  padding: 10px 14px;
+  background: rgba(251, 191, 36, 0.1);
+  border: 1px solid rgba(251, 191, 36, 0.35);
+  border-radius: var(--r);
+}
+
 .upload-error {
   font-size: 13px;
   color: var(--danger);
@@ -607,6 +616,17 @@ textarea:focus-visible {
   font-size: 12px;
   color: var(--text-3);
   font-weight: 400;
+}
+.brand-badge {
+  background: var(--accent-dim);
+  color: var(--accent);
+  border: 1px solid rgba(74, 142, 255, 0.35);
+  border-radius: 999px;
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  line-height: 1;
 }
 
 /* ── File chips ───────────────────────── */
@@ -1009,9 +1029,16 @@ textarea:focus-visible {
   border-radius: 2px;
   box-shadow: 0 0 0 1.5px rgba(255, 200, 40, 0.5);
   animation: highlightPop 1s ease-out;
+  scroll-margin-top: 80px;
+  scroll-margin-bottom: 40px;
 }
 
 /* ── Source tag buttons (clickable) ──── */
+.source-tag-sep {
+  opacity: 0.45;
+  font-weight: 400;
+}
+
 .source-tag {
   display: inline-flex;
   align-items: center;
@@ -1176,6 +1203,50 @@ textarea:focus-visible {
   flex-wrap: wrap;
   gap: 5px;
   padding: 0 3px;
+}
+
+.source-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px;
+  background: var(--panel-alt);
+  border: 1px solid var(--border-mid);
+  border-radius: var(--r);
+  min-width: 170px;
+}
+
+.source-group-label {
+  font-size: 12px;
+  color: var(--text-2);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.source-group-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.source-line {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  width: 100%;
+}
+
+.source-line-file {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text);
+  word-break: break-word;
+}
+
+.source-line-pages {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 /* ── Typing indicator ─────────────────── */

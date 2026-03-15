@@ -89,12 +89,10 @@ function PdfPage({ pdfDoc, pageNum, scale, isTarget, highlightText }) {
   const canvasRef = useRef();
   const textLayerRef = useRef();
   const [intersecting, setIntersecting] = useState(false);
-  const [textReady, setTextReady] = useState(false);
-
-  // Reset text-ready when target/highlight changes
-  useEffect(() => {
-    setTextReady(false);
-  }, [highlightText, isTarget]);
+  // renderSerial increments every time the text layer finishes rendering.
+  // Using a counter (not a boolean) ensures the highlight effect always
+  // re-fires even if the dep value goes true→true (e.g. scale changes).
+  const [renderSerial, setRenderSerial] = useState(0);
 
   // Lazy visibility — also force-render target page immediately
   useEffect(() => {
@@ -163,7 +161,7 @@ function PdfPage({ pdfDoc, pageNum, scale, isTarget, highlightText }) {
           /* text layer optional — page still renders */
         }
 
-        if (!cancelled) setTextReady(true);
+        if (!cancelled) setRenderSerial((s) => s + 1);
       } catch (err) {
         if (!cancelled) console.warn(`Page ${pageNum} render error:`, err);
       }
@@ -174,11 +172,22 @@ function PdfPage({ pdfDoc, pageNum, scale, isTarget, highlightText }) {
     };
   }, [intersecting, pdfDoc, pageNum, scale]);
 
-  // Apply highlights once text layer is ready
+  // Apply highlights whenever the text layer finishes rendering (renderSerial
+  // bumps) OR whenever the target / highlight text changes on an already-
+  // rendered page.  renderSerial === 0 means the page hasn't rendered yet.
   useEffect(() => {
-    if (!textReady) return;
-    applyHighlights(textLayerRef.current, isTarget ? highlightText : null);
-  }, [textReady, isTarget, highlightText]);
+    if (renderSerial === 0) return;
+    const tl = textLayerRef.current;
+    applyHighlights(tl, isTarget ? highlightText : null);
+    if (isTarget && highlightText) {
+      const primary = tl?.querySelector(".text-highlight--primary");
+      if (primary) {
+        requestAnimationFrame(() =>
+          primary.scrollIntoView({ behavior: "smooth", block: "center" }),
+        );
+      }
+    }
+  }, [renderSerial, isTarget, highlightText]);
 
   // Placeholder size (A4 at current scale)
   const phW = Math.round(595 * scale);

@@ -6,6 +6,7 @@ export default function ChatInterface({
   files,
   activeFile,
   onNavigate,
+  scope = "selected",
 }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
@@ -26,6 +27,8 @@ export default function ChatInterface({
     el.style.height = `${Math.min(el.scrollHeight, 120)}px`;
   }
 
+  const isGlobal = scope === "global";
+
   const sendMessage = useCallback(async () => {
     const query = input.trim();
     if (!query || loading) return;
@@ -36,6 +39,10 @@ export default function ChatInterface({
     }
 
     const userMsg = { id: Date.now(), role: "user", content: query };
+    const nextHistory = [...messages, userMsg].map(({ role, content }) => ({
+      role,
+      content,
+    }));
     setMessages((prev) => [...prev, userMsg]);
     setLoading(true);
 
@@ -46,7 +53,9 @@ export default function ChatInterface({
         body: JSON.stringify({
           username,
           query,
-          file_names: (files || []).map((f) => f.name),
+          history: nextHistory,
+          // Empty array signals global search; backend then searches all user docs
+          file_names: isGlobal ? [] : (files || []).map((f) => f.name),
         }),
       });
 
@@ -85,7 +94,7 @@ export default function ChatInterface({
     } finally {
       setLoading(false);
     }
-  }, [input, loading, username, files, onNavigate]);
+  }, [input, loading, username, files, onNavigate, isGlobal]);
 
   function handleKeyDown(e) {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -98,17 +107,34 @@ export default function ChatInterface({
     <div className="chat">
       {/* Header */}
       <div className="chat-header">
-        <span className="chat-title">Ask about your documents</span>
-        {files && files.length > 0 && (
-          <span
-            className="chat-active-file"
-            title={files.map((f) => f.name).join(", ")}
+        <span className="chat-title">
+          {isGlobal
+            ? "Global search across your library"
+            : "Ask about your documents"}
+        </span>
+        <div className="chat-actions">
+          <button
+            type="button"
+            className="chat-reset-btn"
+            onClick={() => setMessages([])}
+            disabled={loading || messages.length === 0}
+            title="Start a fresh temporary chat session"
           >
-            {files.length === 1
-              ? files[0].name
-              : `${files.length} files selected`}
-          </span>
-        )}
+            New chat
+          </button>
+          {files && files.length > 0 && (
+            <span
+              className="chat-active-file"
+              title={files.map((f) => f.name).join(", ")}
+            >
+              {isGlobal
+                ? `${files.length} document${files.length === 1 ? "" : "s"}`
+                : files.length === 1
+                  ? files[0].name
+                  : `${files.length} files selected`}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Messages */}
@@ -131,7 +157,11 @@ export default function ChatInterface({
                 />
               </svg>
             </div>
-            <p>Ask anything about your PDFs</p>
+            <p>
+              {isGlobal
+                ? "Ask anything across all your uploaded PDFs."
+                : "Ask anything about the selected PDFs."}
+            </p>
             <p>I'll find answers and jump to the source page automatically.</p>
           </div>
         )}
@@ -144,28 +174,73 @@ export default function ChatInterface({
             <div
               className={`message-content${msg.error ? " message-content--error" : ""}`}
             >
-              {msg.content}
+              <pre
+                style={{
+                  margin: 0,
+                  whiteSpace: "pre-wrap",
+                  fontFamily: "inherit",
+                }}
+              >
+                {msg.content}
+              </pre>
             </div>
 
             {msg.matches && msg.matches.length > 0 && (
               <div className="message-sources">
-                {msg.matches.map((m, i) => (
-                  <button
-                    key={i}
-                    className={`source-tag${i === 0 ? " source-tag--primary" : ""}`}
-                    title={`Jump to ${m.file_name} — page ${m.page_label ?? m.page_index}`}
-                    onClick={() =>
-                      onNavigate?.(
-                        m.file_name,
-                        m.page_index,
-                        m.chunk_text ?? "",
-                      )
+                {(() => {
+                  const grouped = msg.matches.reduce((acc, m) => {
+                    const fileName = m.file_name || "Document";
+                    const page = m.page_label ?? m.page_index + 1;
+                    if (!acc[fileName]) acc[fileName] = new Map();
+                    if (!acc[fileName].has(page)) {
+                      acc[fileName].set(page, {
+                        page,
+                        pageIndex: m.page_index,
+                        chunk: m.chunk_text ?? "",
+                      });
                     }
-                  >
-                    {/* {m.file_name} */}
-                    {m.page_label != null ? `Page ${m.page_label}` : ""}
-                  </button>
-                ))}
+                    return acc;
+                  }, {});
+
+                  const entries = Object.entries(grouped);
+                  return (
+                    <div className="source-group">
+                      <div className="source-group-label">References</div>
+                      <div className="source-group-tags source-group-tags--stacked">
+                        {entries.map(([fileName, pageMap], groupIdx) => {
+                          const pages = Array.from(pageMap.values()).sort(
+                            (a, b) => (a.page || 0) - (b.page || 0),
+                          );
+                          return (
+                            <div key={fileName} className="source-line">
+                              <div className="source-line-file">
+                                {fileName.replace(/\.pdf$/i, "")}:
+                              </div>
+                              <div className="source-line-pages">
+                                {pages.map((p, pageIdx) => (
+                                  <button
+                                    key={`${fileName}-${p.page}`}
+                                    className={`source-tag${groupIdx === 0 && pageIdx === 0 ? " source-tag--primary" : ""}`}
+                                    title={`Jump to ${fileName} — page ${p.page}`}
+                                    onClick={() =>
+                                      onNavigate?.(
+                                        fileName,
+                                        p.pageIndex,
+                                        p.chunk,
+                                      )
+                                    }
+                                  >
+                                    Page {p.page}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             )}
           </div>

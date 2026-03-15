@@ -8,6 +8,7 @@ export default function UploadScreen({ username, onComplete }) {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
   const [progressStep, setProgressStep] = useState(null);
+  const [skippedFiles, setSkippedFiles] = useState([]);
   const inputRef = useRef();
 
   function addFiles(incoming) {
@@ -46,6 +47,7 @@ export default function UploadScreen({ username, onComplete }) {
     setUploading(true);
     setProgressStep(0);
     setError("");
+    setSkippedFiles([]);
 
     // Advance through steps on a timer; the API call may resolve and skip ahead
     const t1 = setTimeout(
@@ -76,6 +78,20 @@ export default function UploadScreen({ username, onComplete }) {
         name: f.file_name,
         url: f.file_url,
       }));
+      const skipped = data.skipped_files || [];
+
+      if (skipped.length > 0 && uploadedFiles.length === 0) {
+        // All files were duplicates — stay on screen and warn
+        setProgressStep(null);
+        setUploading(false);
+        setSkippedFiles(skipped);
+        setFiles([]);
+        return;
+      }
+
+      if (skipped.length > 0) {
+        setSkippedFiles(skipped);
+      }
 
       // Show the "Done!" step briefly before transitioning
       setProgressStep(3);
@@ -211,6 +227,13 @@ export default function UploadScreen({ username, onComplete }) {
               }}
             />
           </div>
+
+          {skippedFiles.length > 0 && (
+            <div className="upload-warn">
+              <strong>Already uploaded (skipped):</strong>{" "}
+              {skippedFiles.join(", ")}
+            </div>
+          )}
 
           {error && <div className="upload-error">{error}</div>}
 

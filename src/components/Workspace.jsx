@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import React, { useState, useRef } from "react";
 import PDFViewer from "./PDFViewer";
 import ChatInterface from "./ChatInterface";
 import { API_BASE } from "../lib/api";
@@ -6,6 +6,7 @@ import { API_BASE } from "../lib/api";
 export default function Workspace({
   username,
   files,
+  scope = "selected",
   onAddFiles,
   onLogout,
   onGoToDashboard,
@@ -13,8 +14,10 @@ export default function Workspace({
   const [activeIndex, setActiveIndex] = useState(0);
   const [addError, setAddError] = useState("");
   // navTarget drives automatic PDF navigation after an AI response
-  // Shape: { fileName: string, pageIndex: number, chunkText: string } | null
+  // Shape: { fileName, pageIndex, chunkText, _serial } — _serial bumps on every
+  // navigate call so the same page/file re-triggers scroll & highlight.
   const [navTarget, setNavTarget] = useState(null);
+  const navSerialRef = React.useRef(0);
   const inputRef = useRef();
 
   // Keep activeIndex in bounds when files change
@@ -29,7 +32,14 @@ export default function Workspace({
     if (fileIdx !== -1 && fileIdx !== safeIndex) {
       setActiveIndex(fileIdx);
     }
-    setNavTarget({ fileName, pageIndex, chunkText });
+    // Bump serial so that re-querying the same page still re-triggers effects
+    navSerialRef.current += 1;
+    setNavTarget({
+      fileName,
+      pageIndex,
+      chunkText,
+      _serial: navSerialRef.current,
+    });
   }
 
   async function handleAddMore(e) {
@@ -73,10 +83,15 @@ export default function Workspace({
           </span>
           <span className="brand-sep" />
           <span className="brand-user">@{username}</span>
+          {scope === "global" && (
+            <span className="brand-badge" title="Searching all documents">
+              Global Chat
+            </span>
+          )}
         </div>
 
         <div className="file-chips">
-          {files.map((f, i) => (
+          {/* {files.map((f, i) => (
             <button
               key={`${f.name}-${i}`}
               className={`file-chip${i === safeIndex ? " file-chip--active" : ""}`}
@@ -85,7 +100,7 @@ export default function Workspace({
             >
               {f.name.replace(/\.pdf$/i, "")}
             </button>
-          ))}
+          ))} */}
         </div>
 
         <button
@@ -201,6 +216,7 @@ export default function Workspace({
             username={username}
             files={files}
             activeFile={files[safeIndex]}
+            scope={scope}
             onNavigate={handleNavigate}
           />
         </div>

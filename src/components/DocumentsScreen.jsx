@@ -4,6 +4,7 @@ import { getUserDocuments, deleteDocument } from "../lib/api";
 export default function DocumentsScreen({
   username,
   onOpen,
+  onOpenGlobal,
   onUploadNew,
   onLogout,
 }) {
@@ -86,6 +87,30 @@ export default function DocumentsScreen({
         </div>
 
         <div style={{ flex: 1 }} />
+
+        {docs.length > 0 && (
+          <button
+            className="add-pdf-btn add-pdf-btn--accent"
+            onClick={() => onOpenGlobal?.()}
+            title="Ask across all documents"
+          >
+            <svg
+              width="13"
+              height="13"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M12 4.5v15m7.5-7.5h-15"
+              />
+            </svg>
+            Global Chat
+          </button>
+        )}
 
         {selectedFiles.size > 0 && (
           <button

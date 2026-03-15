@@ -9,6 +9,7 @@ export default function App() {
   const [screen, setScreen] = useState("loading"); // 'loading' | 'auth' | 'documents' | 'upload' | 'workspace'
   const [username, setUsername] = useState("");
   const [files, setFiles] = useState([]); // [{ name, url }]
+  const [workspaceScope, setWorkspaceScope] = useState("selected"); // 'selected' | 'global'
 
   // Restore session from localStorage on mount
   useEffect(() => {
@@ -44,6 +45,7 @@ export default function App() {
 
   function handleUploadComplete(uploadedFiles) {
     setFiles(uploadedFiles);
+    setWorkspaceScope("selected");
     setScreen("workspace");
   }
 
@@ -53,7 +55,20 @@ export default function App() {
 
   function handleOpenDocuments(selectedDocs) {
     setFiles(selectedDocs.map((d) => ({ name: d.file_name, url: d.file_url })));
+    setWorkspaceScope("selected");
     setScreen("workspace");
+  }
+
+  async function handleOpenGlobal() {
+    try {
+      const docs = await getUserDocuments(username);
+      const mapped = docs.map((d) => ({ name: d.file_name, url: d.file_url }));
+      setFiles(mapped);
+      setWorkspaceScope("global");
+      setScreen("workspace");
+    } catch (err) {
+      console.error("Failed to open global chat", err);
+    }
   }
 
   async function handleLogout() {
@@ -77,6 +92,7 @@ export default function App() {
         <DocumentsScreen
           username={username}
           onOpen={handleOpenDocuments}
+          onOpenGlobal={handleOpenGlobal}
           onUploadNew={() => setScreen("upload")}
           onLogout={handleLogout}
         />
@@ -88,6 +104,7 @@ export default function App() {
         <Workspace
           username={username}
           files={files}
+          scope={workspaceScope}
           onAddFiles={handleAddFiles}
           onLogout={handleLogout}
           onGoToDashboard={() => setScreen("documents")}
